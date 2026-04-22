@@ -204,9 +204,9 @@ body {
 }
 
 /* Show only every 3rd label to avoid clutter */
-.bar-label:not(:nth-child(3n+1)) {
-  color: transparent;
-}
+/*.bar-label:not(:nth-child(3n+1)) {
+/*  color: transparent;
+/*}
 
 /* ── Entry form ───────────────────────────────────────────────────────────── */
 
