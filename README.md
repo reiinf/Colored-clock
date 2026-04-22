@@ -6,4 +6,4 @@
 
 
 Установка:
-Firefox → about:debugging → This Firefox → Load Temporary Add-on → выбрать ff-extension.zip (или manifest.json внутри папки)
+Firefox → about:debugging → This Firefox → Load Temporary Add-on → выбрать manifest.json
