@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Colored Clock — Импорт / Экспорт</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a1a;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      padding: 24px;
+      max-width: 480px;
+    }
+
+    h2 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #ccc;
+      margin-bottom: 20px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    button {
+      flex: 1;
+      background: #333;
+      color: #ccc;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 9px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    button:hover { background: #3a3a3a; color: #fff; }
+
+    button.primary {
+      background: #4a7dff;
+      color: #fff;
+      border-color: #4a7dff;
+    }
+    button.primary:hover { background: #3a6dee; }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed #444;
+      border-radius: 8px;
+      padding: 28px 16px;
+      text-align: center;
+      color: #666;
+      font-size: 13px;
+      cursor: default;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      line-height: 1.6;
+    }
+
+    .drop-zone .hint {
+      font-size: 11px;
+      color: #555;
+      margin-top: 4px;
+    }
+
+    body.drag-over .drop-zone {
+      border-color: #4a7dff;
+      color: #4a7dff;
+      background: #1e2a3a;
+    }
+
+    .drop-zone.success {
+      border-color: #4CAF50;
+      color: #4CAF50;
+      background: #1a2e1a;
+    }
+
+    .drop-zone.error {
+      border-color: #F44336;
+      color: #F44336;
+      background: #2e1a1a;
+    }
+
+    .status {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #888;
+      min-height: 18px;
+    }
+
+    input[type="file"] { display: none; }
+  </style>
+</head>
+<body>
+
+  <h2>Импорт / Экспорт данных</h2>
+
+  <div class="row">
+    <button id="exportBtn">⬇ Экспорт JSON</button>
+    <button class="primary" id="importBtn">⬆ Импорт...</button>
+    <input type="file" id="importFile" accept=".json" />
+  </div>
+
+  <div class="drop-zone" id="dropZone">
+    <div>или перетащи JSON-файл сюда</div>
+    <div class="hint">Расписание и история будут заменены данными из файла</div>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <script src="options.js"></script>
+</body>
+</html>

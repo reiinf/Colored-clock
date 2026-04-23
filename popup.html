@@ -3,26 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Time Tracker</title>
+  <title>Colored Clock</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
 
-  <!-- ── Icon mode toggle ─────────────────────────────────────── -->
+  <!-- ── Row 1: Icon source + clock style ────────────────────────────────── -->
   <div class="section toggle-section">
     <span class="label">Иконка:</span>
     <div class="toggle-group">
       <button class="toggle-btn active" id="modeSchedule">Расписание</button>
       <button class="toggle-btn" id="modeHistory">История</button>
     </div>
+    <div class="toggle-group">
+      <button class="toggle-btn active" id="styleHands">🕐</button>
+      <button class="toggle-btn" id="styleDigits">12</button>
+    </div>
+    <div class="toggle-group">
+      <button class="toggle-btn active" id="format24">24ч</button>
+      <button class="toggle-btn" id="format12">AM/PM</button>
+    </div>
   </div>
 
-  <!-- ── Block 1: Schedule ────────────────────────────────────── -->
+  <!-- ── Block 1: Schedule ────────────────────────────────────────────────── -->
   <div class="section">
     <div class="section-title">Расписание</div>
 
     <div class="palette">
-      <button class="palette-btn active" data-color="null"  title="Очистить">✕</button>
+      <button class="palette-btn active" data-color="null"   title="Очистить">✕</button>
       <button class="palette-btn"        data-color="green"  title="Хорошо"></button>
       <button class="palette-btn"        data-color="yellow" title="Внимание"></button>
       <button class="palette-btn"        data-color="red"    title="Плохо"></button>
@@ -32,11 +40,10 @@
       <div class="bar" id="scheduleBar"></div>
       <div class="time-marker" id="scheduleMarker"></div>
     </div>
-
     <div class="bar-labels" id="scheduleLabels"></div>
   </div>
 
-  <!-- ── Block 2: History ─────────────────────────────────────── -->
+  <!-- ── Block 2: History ─────────────────────────────────────────────────── -->
   <div class="section">
     <div class="section-title">История (типичный день)</div>
 
@@ -44,7 +51,6 @@
       <div class="bar" id="historyBar"></div>
       <div class="time-marker" id="historyMarker"></div>
     </div>
-
     <div class="bar-labels" id="historyLabels"></div>
 
     <div class="entry-form">
@@ -59,11 +65,10 @@
     </div>
   </div>
 
-  <!-- ── Data export / import ─────────────────────────────────── -->
+  <!-- ── Data export / import ─────────────────────────────────────────────── -->
   <div class="section data-section">
     <button id="exportBtn">⬇ Экспорт</button>
     <button id="importBtn">⬆ Импорт</button>
-    <input type="file" id="importFile" accept=".json" style="display:none" />
   </div>
 
   <script src="popup.js"></script>

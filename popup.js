@@ -3,52 +3,80 @@
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const TREND_VAL   = { "↓": 1, "=": 2, "↑": 3, "↑↑": 4 };
-const TREND_CLASS = { "↓": "low", "=": "normal", "↑": "high", "↑↑": "excess" };
-
-// Minimum days with ≥3/4 quadrants covered to enable minute mode for an hour
 const MINUTE_MODE_MIN_DAYS = 5;
 
 // ── State ──────────────────────────────────────────────────────────────────────
 
-let schedule  = {};   // { "0": "green", "14": "red", ... }
-let history   = [];   // [{ ts: ISO, trend: "↓"|"="|"↑"|"↑↑" }, ...]
-let iconMode  = "schedule";
-let activePaintColor = null;  // null | "green" | "yellow" | "red"
-let isPainting = false;
+let schedule    = {};
+let history     = [];
+let iconMode    = "schedule";
+let clockStyle  = "hands";   // "hands" | "digits"
+let hourFormat  = "24";      // "24" | "12"
+let activePaintColor = null;
+let isPainting  = false;
 
 // ── Init ───────────────────────────────────────────────────────────────────────
 
 document.addEventListener("DOMContentLoaded", async () => {
   await loadData();
+  rebuildAll();
+  updateAllToggles();
+  startClock();
+  bindEvents();
+});
+
+function rebuildAll() {
   buildScheduleBar();
   buildHistoryBar();
   buildLabels("scheduleLabels");
   buildLabels("historyLabels");
   updateMarkers();
-  updateToggleUI();
-  startClock();
-  bindEvents();
-});
+}
 
 // ── Storage ────────────────────────────────────────────────────────────────────
 
 async function loadData() {
-  const data = await browser.storage.local.get(["schedule", "history", "iconMode"]);
-  schedule = data.schedule || {};
-  history  = data.history  || [];
-  iconMode = data.iconMode  || "schedule";
+  const data = await browser.storage.local.get(
+    ["schedule", "history", "iconMode", "clockStyle", "hourFormat"]
+  );
+
+  const raw = data.schedule || {};
+  schedule = {};
+  for (const [k, v] of Object.entries(raw)) {
+    schedule[parseInt(k, 10)] = v;
+  }
+
+  history    = data.history    || [];
+  iconMode   = data.iconMode   || "schedule";
+  clockStyle = data.clockStyle || "hands";
+  hourFormat = data.hourFormat || "24";
 }
 
-async function saveSchedule() {
-  await browser.storage.local.set({ schedule });
+async function saveSchedule()  { await browser.storage.local.set({ schedule }); }
+async function saveHistory()   { await browser.storage.local.set({ history }); }
+async function saveIconMode()  { await browser.storage.local.set({ iconMode }); }
+async function saveClockStyle(){ await browser.storage.local.set({ clockStyle }); }
+async function saveHourFormat(){ await browser.storage.local.set({ hourFormat }); }
+
+// ── Hour formatting ────────────────────────────────────────────────────────────
+
+function formatHourLabel(h) {
+  if (hourFormat === "24") return String(h);
+  if (h === 0)  return "12";
+  if (h <= 11)  return String(h);
+  if (h === 12) return "12";
+  return String(h - 12);
 }
 
-async function saveHistory() {
-  await browser.storage.local.set({ history });
-}
-
-async function saveIconMode() {
-  await browser.storage.local.set({ iconMode });
+function formatTime(date) {
+  const hh = date.getHours();
+  const mm  = String(date.getMinutes()).padStart(2, "0");
+  if (hourFormat === "24") {
+    return `${String(hh).padStart(2, "0")}:${mm}`;
+  }
+  const period = hh < 12 ? "AM" : "PM";
+  const h12    = hh % 12 || 12;
+  return `${h12}:${mm} ${period}`;
 }
 
 // ── Schedule bar ───────────────────────────────────────────────────────────────
@@ -56,29 +84,14 @@ async function saveIconMode() {
 function buildScheduleBar() {
   const bar = document.getElementById("scheduleBar");
   bar.innerHTML = "";
-
   for (let h = 0; h < 24; h++) {
     const cell = document.createElement("div");
     cell.className = "cell";
     cell.dataset.hour = h;
-
     const color = schedule[h] || null;
     if (color) cell.dataset.color = color;
-
     highlightCurrentHour(cell, h);
     bar.appendChild(cell);
-  }
-}
-
-function updateScheduleCell(hour) {
-  const cell = document.querySelector(`#scheduleBar .cell[data-hour="${hour}"]`);
-  if (!cell) return;
-
-  const color = schedule[hour] || null;
-  if (color) {
-    cell.dataset.color = color;
-  } else {
-    delete cell.dataset.color;
   }
 }
 
@@ -87,26 +100,21 @@ function updateScheduleCell(hour) {
 function buildHistoryBar() {
   const bar = document.getElementById("historyBar");
   bar.innerHTML = "";
-
   for (let h = 0; h < 24; h++) {
     const cell = document.createElement("div");
     cell.className = "cell";
     cell.dataset.hour = h;
 
-    const minuteMode = isMinuteMode(h);
-
-    if (minuteMode) {
+    if (isMinuteMode(h)) {
       cell.classList.add("has-subcells");
       for (let q = 0; q < 4; q++) {
         const sub = document.createElement("div");
         sub.className = "subcell";
-        const trendClass = getQuadrantTrend(h, q);
-        sub.dataset.trend = trendClass;
+        sub.dataset.trend = getQuadrantTrend(h, q);
         cell.appendChild(sub);
       }
     } else {
-      const trendClass = getHourTrend(h);
-      cell.dataset.trend = trendClass;
+      cell.dataset.trend = getHourTrend(h);
     }
 
     highlightCurrentHour(cell, h);
@@ -114,46 +122,37 @@ function buildHistoryBar() {
   }
 }
 
-// Returns trend CSS class for a full hour
 function getHourTrend(hour) {
   const entries = history.filter(e => new Date(e.ts).getHours() === hour);
   if (entries.length === 0) return "empty";
   return meanToClass(calcMean(entries));
 }
 
-// Returns trend CSS class for a 15-min quadrant (0=0-14, 1=15-29, 2=30-44, 3=45-59)
 function getQuadrantTrend(hour, quadrant) {
   const minStart = quadrant * 15;
   const minEnd   = minStart + 14;
-
-  const entries = history.filter(e => {
+  const entries  = history.filter(e => {
     const d = new Date(e.ts);
     const m = d.getMinutes();
     return d.getHours() === hour && m >= minStart && m <= minEnd;
   });
-
   if (entries.length === 0) return "empty";
   return meanToClass(calcMean(entries));
 }
 
-// Checks if an hour has enough data to use minute mode
 function isMinuteMode(hour) {
-  // Group entries by day
   const byDay = {};
   history.forEach(e => {
     const d = new Date(e.ts);
     if (d.getHours() !== hour) return;
     const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
     if (!byDay[key]) byDay[key] = new Set();
-    byDay[key].add(Math.floor(d.getMinutes() / 15)); // quadrant 0-3
+    byDay[key].add(Math.floor(d.getMinutes() / 15));
   });
-
-  // Count days where ≥3 quadrants are covered
   let qualifyingDays = 0;
   for (const day of Object.values(byDay)) {
     if (day.size >= 3) qualifyingDays++;
   }
-
   return qualifyingDays >= MINUTE_MODE_MIN_DAYS;
 }
 
@@ -176,7 +175,7 @@ function buildLabels(containerId) {
   for (let h = 0; h < 24; h++) {
     const lbl = document.createElement("div");
     lbl.className = "bar-label";
-    lbl.textContent = h;
+    lbl.textContent = formatHourLabel(h);
     wrap.appendChild(lbl);
   }
 }
@@ -184,10 +183,9 @@ function buildLabels(containerId) {
 // ── Time marker ────────────────────────────────────────────────────────────────
 
 function updateMarkers() {
-  const now     = new Date();
+  const now      = new Date();
   const totalMin = now.getHours() * 60 + now.getMinutes();
   const pct      = (totalMin / (24 * 60)) * 100;
-
   setMarkerPos("scheduleMarker", pct);
   setMarkerPos("historyMarker",  pct);
 }
@@ -198,10 +196,7 @@ function setMarkerPos(id, pct) {
 }
 
 function highlightCurrentHour(cell, hour) {
-  const now = new Date();
-  if (now.getHours() === hour) {
-    cell.classList.add("current-hour");
-  }
+  if (new Date().getHours() === hour) cell.classList.add("current-hour");
 }
 
 // ── Clock ──────────────────────────────────────────────────────────────────────
@@ -209,9 +204,7 @@ function highlightCurrentHour(cell, hour) {
 function startClock() {
   function tick() {
     const now = new Date();
-    const hh  = String(now.getHours()).padStart(2, "0");
-    const mm  = String(now.getMinutes()).padStart(2, "0");
-    document.getElementById("entryTime").textContent = `${hh}:${mm}`;
+    document.getElementById("entryTime").textContent = formatTime(now);
     updateMarkers();
   }
   tick();
@@ -221,9 +214,17 @@ function startClock() {
 // ── Event bindings ─────────────────────────────────────────────────────────────
 
 function bindEvents() {
-  // Icon mode toggle
+  // Icon source toggle
   document.getElementById("modeSchedule").addEventListener("click", () => setIconMode("schedule"));
   document.getElementById("modeHistory").addEventListener("click",  () => setIconMode("history"));
+
+  // Clock style toggle
+  document.getElementById("styleHands").addEventListener("click",  () => setClockStyle("hands"));
+  document.getElementById("styleDigits").addEventListener("click", () => setClockStyle("digits"));
+
+  // Hour format toggle
+  document.getElementById("format24").addEventListener("click", () => setHourFormat("24"));
+  document.getElementById("format12").addEventListener("click", () => setHourFormat("12"));
 
   // Palette
   document.querySelectorAll(".palette-btn").forEach(btn => {
@@ -235,7 +236,7 @@ function bindEvents() {
     });
   });
 
-  // Paint bar – mouse events
+  // Paint bar
   const schedBar = document.getElementById("scheduleBar");
 
   schedBar.addEventListener("mousedown", (e) => {
@@ -251,9 +252,7 @@ function bindEvents() {
     if (cell) paintCell(cell);
   });
 
-  document.addEventListener("mouseup", () => {
-    isPainting = false;
-  });
+  document.addEventListener("mouseup", () => { isPainting = false; });
 
   // Save entry
   document.getElementById("saveEntry").addEventListener("click", saveEntryHandler);
@@ -261,16 +260,14 @@ function bindEvents() {
   // Export / Import
   document.getElementById("exportBtn").addEventListener("click", exportData);
   document.getElementById("importBtn").addEventListener("click", () => {
-    document.getElementById("importFile").click();
+    browser.runtime.openOptionsPage();
   });
-  document.getElementById("importFile").addEventListener("change", importData);
 }
 
 // ── Paint ──────────────────────────────────────────────────────────────────────
 
 function paintCell(cell) {
   const hour = parseInt(cell.dataset.hour, 10);
-
   if (activePaintColor === null) {
     delete schedule[hour];
     delete cell.dataset.color;
@@ -278,21 +275,39 @@ function paintCell(cell) {
     schedule[hour] = activePaintColor;
     cell.dataset.color = activePaintColor;
   }
-
   saveSchedule();
 }
 
-// ── Icon mode ──────────────────────────────────────────────────────────────────
+// ── Toggles ────────────────────────────────────────────────────────────────────
 
 async function setIconMode(mode) {
   iconMode = mode;
   await saveIconMode();
-  updateToggleUI();
+  updateAllToggles();
 }
 
-function updateToggleUI() {
+async function setClockStyle(style) {
+  clockStyle = style;
+  await saveClockStyle();
+  updateAllToggles();
+}
+
+async function setHourFormat(fmt) {
+  hourFormat = fmt;
+  await saveHourFormat();
+  // Rebuild labels and clock display
+  buildLabels("scheduleLabels");
+  buildLabels("historyLabels");
+  updateAllToggles();
+}
+
+function updateAllToggles() {
   document.getElementById("modeSchedule").classList.toggle("active", iconMode === "schedule");
   document.getElementById("modeHistory").classList.toggle("active",  iconMode === "history");
+  document.getElementById("styleHands").classList.toggle("active",   clockStyle === "hands");
+  document.getElementById("styleDigits").classList.toggle("active",  clockStyle === "digits");
+  document.getElementById("format24").classList.toggle("active",     hourFormat === "24");
+  document.getElementById("format12").classList.toggle("active",     hourFormat === "12");
 }
 
 // ── Save entry ─────────────────────────────────────────────────────────────────
@@ -300,14 +315,10 @@ function updateToggleUI() {
 async function saveEntryHandler() {
   const trend = document.getElementById("trendSelect").value;
   const entry = { ts: new Date().toISOString(), trend };
-
   history.push(entry);
   await saveHistory();
-
-  // Rebuild only history bar (schedule bar unchanged)
   buildHistoryBar();
 
-  // Flash the button to confirm
   const btn = document.getElementById("saveEntry");
   btn.classList.add("save-flash");
   setTimeout(() => btn.classList.remove("save-flash"), 400);
@@ -319,47 +330,14 @@ function exportData() {
   const payload = JSON.stringify({ schedule, history }, null, 2);
   const blob    = new Blob([payload], { type: "application/json" });
   const url     = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href     = url;
-  a.download = `time-tracker-${datestamp()}.json`;
+  const a       = document.createElement("a");
+  a.href        = url;
+  a.download    = `time-tracker-${datestamp()}.json`;
   a.click();
-
   URL.revokeObjectURL(url);
 }
 
-// ── Import ─────────────────────────────────────────────────────────────────────
-
-function importData(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = async (evt) => {
-    try {
-      const parsed = JSON.parse(evt.target.result);
-
-      if (parsed.schedule && typeof parsed.schedule === "object") {
-        schedule = parsed.schedule;
-      }
-      if (parsed.history && Array.isArray(parsed.history)) {
-        history = parsed.history;
-      }
-
-      await browser.storage.local.set({ schedule, history });
-
-      buildScheduleBar();
-      buildHistoryBar();
-    } catch (err) {
-      console.error("Import failed:", err);
-      alert("Ошибка импорта: файл повреждён или имеет неверный формат.");
-    }
-  };
-  reader.readAsText(file);
-
-  // Reset input so same file can be re-imported
-  e.target.value = "";
-}
+// Import lives in options.js
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -368,6 +346,4 @@ function datestamp() {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 }
 
-function pad(n) {
-  return String(n).padStart(2, "0");
-}
+function pad(n) { return String(n).padStart(2, "0"); }

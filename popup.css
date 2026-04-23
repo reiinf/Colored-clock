@@ -106,9 +106,9 @@ body {
 }
 
 .palette-btn[data-color="null"]   { background: #3a3a3a; color: #aaa; }
-.palette-btn[data-color="green"]  { background: #4CAF50; }
-.palette-btn[data-color="yellow"] { background: #FFC107; }
-.palette-btn[data-color="red"]    { background: #F44336; }
+.palette-btn[data-color="green"]  { background: #3a7d44; }
+.palette-btn[data-color="yellow"] { background: #a07820; }
+.palette-btn[data-color="red"]    { background: #a03030; }
 
 /* ── Bar ──────────────────────────────────────────────────────────────────── */
 
@@ -138,15 +138,15 @@ body {
 }
 
 /* Schedule cell colors */
-.cell[data-color="green"]  { background: #4CAF50; }
-.cell[data-color="yellow"] { background: #FFC107; }
-.cell[data-color="red"]    { background: #F44336; }
+.cell[data-color="green"]  { background: #3a7d44; }
+.cell[data-color="yellow"] { background: #a07820; }
+.cell[data-color="red"]    { background: #a03030; }
 
 /* History cell colors */
-.cell[data-trend="low"]    { background: #4CAF50; }  /* ↓ */
-.cell[data-trend="normal"] { background: #9E9E9E; }  /* = */
-.cell[data-trend="high"]   { background: #F44336; }  /* ↑ */
-.cell[data-trend="excess"] { background: #9C27B0; }  /* ↑↑ */
+.cell[data-trend="low"]    { background: #3a7d44; }  /* ↓ */
+.cell[data-trend="normal"] { background: #6a6a6a; }  /* = */
+.cell[data-trend="high"]   { background: #a03030; }  /* ↑ */
+.cell[data-trend="excess"] { background: #6a3580; }  /* ↑↑ */
 .cell[data-trend="empty"]  { background: #333; }
 
 /* Current hour highlight */
@@ -168,10 +168,10 @@ body {
   background: #444;
 }
 
-.subcell[data-trend="low"]    { background: #4CAF50; }
-.subcell[data-trend="normal"] { background: #9E9E9E; }
-.subcell[data-trend="high"]   { background: #F44336; }
-.subcell[data-trend="excess"] { background: #9C27B0; }
+.subcell[data-trend="low"]    { background: #3a7d44; }
+.subcell[data-trend="normal"] { background: #6a6a6a; }
+.subcell[data-trend="high"]   { background: #a03030; }
+.subcell[data-trend="excess"] { background: #6a3580; }
 .subcell[data-trend="empty"]  { background: #444; }
 
 /* ── Time marker ──────────────────────────────────────────────────────────── */
@@ -203,10 +203,6 @@ body {
   overflow: hidden;
 }
 
-/* Show only every 3rd label to avoid clutter */
-/*.bar-label:not(:nth-child(3n+1)) {
-/*  color: transparent;
-/*}
 
 /* ── Entry form ───────────────────────────────────────────────────────────── */
 
@@ -290,10 +286,48 @@ body {
 /* ── Save flash ───────────────────────────────────────────────────────────── */
 
 @keyframes flash {
-  0%   { background: #4CAF50; }
+  0%   { background: #3a7d44; }
   100% { background: #4a7dff; }
 }
 
 .save-flash {
   animation: flash 0.4s ease-out forwards;
+}
+
+/* ── Drop zone ────────────────────────────────────────────────────────────── */
+
+.drop-zone {
+  flex: 1;
+  border: 1.5px dashed #555;
+  border-radius: 5px;
+  padding: 6px;
+  font-size: 11px;
+  color: #666;
+  text-align: center;
+  cursor: default;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Highlight when dragging over anywhere in the popup */
+body.drag-over .drop-zone {
+  border-color: #4a7dff;
+  color: #4a7dff;
+  background: #1e2a3a;
+}
+
+/* Success flash */
+.drop-zone.drop-success {
+  border-color: #3a7d44;
+  color: #3a7d44;
+  background: #1a2e1a;
+}
+
+/* Error flash */
+.drop-zone.drop-error {
+  border-color: #a03030;
+  color: #a03030;
+  background: #2e1a1a;
 }
