@@ -5,5 +5,4 @@
 Так же можно накапливать исторические данные по времени
 
 
-Установка:
-Firefox → about:debugging → This Firefox → Load Temporary Add-on → выбрать manifest.json
+https://addons.mozilla.org/ru/firefox/addon/colored-clock/
